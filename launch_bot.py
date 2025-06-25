@@ -132,12 +132,23 @@ def main():
         return
     
     # Detectar entorno de ejecución
-    is_cloud = os.getenv('PORT') or os.getenv('DYNO') or os.getenv('RAILWAY_ENVIRONMENT')
+    is_render = os.getenv('RENDER')
+    is_railway = os.getenv('RAILWAY_ENVIRONMENT')
+    is_heroku = os.getenv('DYNO')
+    port = os.getenv('PORT')
+    
+    is_cloud = port or is_render or is_railway or is_heroku
     
     if is_cloud:
         print("☁️  Ejecutando en entorno de nube")
+        if is_render:
+            print("🔸 Plataforma: Render")
+        elif is_railway:
+            print("🔸 Plataforma: Railway")
+        elif is_heroku:
+            print("� Plataforma: Heroku")
     else:
-        print("💻 Ejecutando en entorno local")
+        print("�💻 Ejecutando en entorno local")
     
     try:
         # Importar y iniciar el bot
@@ -154,12 +165,18 @@ def main():
             print(f"☁️  Iniciando en puerto {port}")
             logger.info(f"Bot iniciado en modo cloud - Puerto: {port}")
             
-            # Para Railway, Heroku, etc.
-            bot.app.run_webhook(
-                listen="0.0.0.0",
-                port=port,
-                webhook_url=os.getenv('WEBHOOK_URL', '')
-            )
+            if is_render:
+                # Para Render - usar polling ya que es más estable
+                print("🔄 Usando polling en Render (más estable)")
+                bot.app.run_polling(drop_pending_updates=True)
+            else:
+                # Para Railway, Heroku, etc. - usar webhooks
+                webhook_url = os.getenv('WEBHOOK_URL', '')
+                bot.app.run_webhook(
+                    listen="0.0.0.0",
+                    port=port,
+                    webhook_url=webhook_url
+                )
         else:
             # Configuración para ejecución local
             print("💻 Iniciando en modo local (polling)")
