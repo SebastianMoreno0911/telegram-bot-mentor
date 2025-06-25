@@ -3,8 +3,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Configuración del bot
-BOT_TOKEN = os.getenv('BOT_TOKEN')
+# Configuración del bot - Soporta ambos nombres de variables
+BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN') or os.getenv('BOT_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')  # Tu chat ID específico
 
 # Sistema de Validación y Evidencias

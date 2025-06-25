@@ -1,0 +1,12 @@
+services:
+  - type: worker  # Background Worker para bots con polling
+    name: telegram-bot-mentor
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python launch_bot.py
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false  # Se debe configurar manualmente en Render Dashboard
+      - key: ENVIRONMENT
+        value: production

@@ -55,16 +55,14 @@ def check_environment():
         print(f"⚠️  Archivo .env no encontrado en: {env_path}")
         print("📝 Usando variables de entorno del sistema (Render/Railway)")
     
-    # Verificar variables obligatorias
-    required_vars = ['BOT_TOKEN']
-    missing_vars = [var for var in required_vars if not os.getenv(var)]
+    # Verificar variables obligatorias (intentar ambos nombres)
+    bot_token = os.getenv('TELEGRAM_BOT_TOKEN') or os.getenv('BOT_TOKEN')
     
-    if missing_vars:
-        print(f"❌ Variables faltantes: {', '.join(missing_vars)}")
+    if not bot_token:
+        print("❌ Variable faltante: TELEGRAM_BOT_TOKEN")
         print("💡 Configura las variables de entorno en Render:")
-        print("   - BOT_TOKEN: Tu token de BotFather")
-        print("   - CHAT_ID: Tu ID de chat (opcional)")
-        print("   - PORT: 8000")
+        print("   - TELEGRAM_BOT_TOKEN: Tu token de BotFather")
+        print("   - ENVIRONMENT: production")
         return False
     
     print("✅ Configuración de entorno correcta")
