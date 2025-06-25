@@ -132,7 +132,7 @@ def main():
         return
     
     # Detectar entorno de ejecución
-    is_render = os.getenv('RENDER')
+    is_render = os.getenv('RENDER') or os.getenv('RENDER_EXTERNAL_HOSTNAME')
     is_railway = os.getenv('RAILWAY_ENVIRONMENT')
     is_heroku = os.getenv('DYNO')
     port = os.getenv('PORT')
@@ -166,9 +166,17 @@ def main():
             logger.info(f"Bot iniciado en modo cloud - Puerto: {port}")
             
             if is_render:
-                # Para Render - usar polling ya que es más estable
-                print("🔄 Usando polling en Render (más estable)")
-                bot.app.run_polling(drop_pending_updates=True)
+                # Para Render - usar webhooks (más eficiente y sin conflictos)
+                print("� Usando webhooks en Render (más eficiente)")
+                webhook_url = f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME', 'localhost')}.onrender.com"
+                print(f"🌐 Webhook URL: {webhook_url}")
+                
+                bot.app.run_webhook(
+                    listen="0.0.0.0",
+                    port=port,
+                    webhook_url=webhook_url,
+                    url_path="/webhook"
+                )
             else:
                 # Para Railway, Heroku, etc. - usar webhooks
                 webhook_url = os.getenv('WEBHOOK_URL', '')
