@@ -53,15 +53,18 @@ def check_environment():
         print(f"✅ Configuración cargada desde: {env_path}")
     else:
         print(f"⚠️  Archivo .env no encontrado en: {env_path}")
-        print("📝 Copia .env.example a .env y configúralo")
-        return False
+        print("📝 Usando variables de entorno del sistema (Render/Railway)")
     
     # Verificar variables obligatorias
     required_vars = ['BOT_TOKEN']
     missing_vars = [var for var in required_vars if not os.getenv(var)]
     
     if missing_vars:
-        print(f"❌ Variables faltantes en .env: {', '.join(missing_vars)}")
+        print(f"❌ Variables faltantes: {', '.join(missing_vars)}")
+        print("💡 Configura las variables de entorno en Render:")
+        print("   - BOT_TOKEN: Tu token de BotFather")
+        print("   - CHAT_ID: Tu ID de chat (opcional)")
+        print("   - PORT: 8000")
         return False
     
     print("✅ Configuración de entorno correcta")
@@ -117,15 +120,15 @@ def main():
     
     # Verificaciones previas
     if not check_dependencies():
-        input("❌ Presiona Enter para salir...")
+        logger.error("Dependencias faltantes")
         return
     
     if not check_environment():
-        input("❌ Presiona Enter para salir...")
+        logger.error("Variables de entorno faltantes")
         return
     
     if not check_database():
-        input("❌ Presiona Enter para salir...")
+        logger.error("Error de base de datos")
         return
     
     # Detectar entorno de ejecución
@@ -172,9 +175,6 @@ def main():
     except Exception as e:
         print(f"❌ Error crítico: {e}")
         logger.error(f"Error crítico: {e}", exc_info=True)
-        
-        if not is_cloud:
-            input("❌ Presiona Enter para salir...")
 
 if __name__ == '__main__':
     main()
