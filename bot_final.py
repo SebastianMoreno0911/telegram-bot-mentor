@@ -11,9 +11,10 @@ from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboard
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 import random
 import sqlite3
-from config import BOT_TOKEN, MOTIVATIONAL_PHRASES, STUDY_GUIDE, TOTAL_WEEKS, POINTS_TARGET, EVIDENCE_REQUIRED, STRICT_VALIDATION
+from config import BOT_TOKEN, MOTIVATIONAL_PHRASES, AI_MOTIVATIONAL_PHRASES, STUDY_GUIDE, TOTAL_WEEKS, POINTS_TARGET, EVIDENCE_REQUIRED, STRICT_VALIDATION, WEEK_COMPLETION_REQUIRED, AUTO_RESET_INCOMPLETE_WEEKS
 from database import init_db, update_progress, get_user_stats
 from evidence_manager import evidence_validator, exam_manager
+from notification_manager import notification_manager
 
 # Configurar logging
 logging.basicConfig(
@@ -31,11 +32,15 @@ class StudyMentorBot:
         self.app = Application.builder().token(BOT_TOKEN).build()
         self.setup_handlers()
         
+        # Inicializar sistema de notificaciones
+        notification_manager.start_scheduler()
+        
     def setup_handlers(self):
         """Configurar todos los handlers del bot"""
         # Comandos básicos
         self.app.add_handler(CommandHandler("start", self.start_command))
         self.app.add_handler(CommandHandler("help", self.help_command))
+        self.app.add_handler(CommandHandler("reiniciar", self.reset_command))
         
         # Comandos principales
         self.app.add_handler(CommandHandler("semana", self.current_week))
@@ -148,6 +153,12 @@ Estoy aquí para guiarte en tu journey de **12 semanas** hacia convertirte en un
 • `/examen` - Iniciar examen
 • `/validacion` - Validar progreso
 • `/estado` - Ver estado de la semana
+• `/reiniciar` - Reiniciar bot completamente
+
+**🔔 NOTIFICACIONES DIARIAS:**
+• 9:00 AM - Recordatorio de estudio
+• 8:00 PM - Mensaje motivacional
+• Validación automática semanal
 
 **🎯 Tu Objetivo:** 15 puntos en 12 semanas
 • 1 punto = Proyecto semanal completado
@@ -171,6 +182,35 @@ Estoy aquí para guiarte en tu journey de **12 semanas** hacia convertirte en un
         current_week = min((days_passed // 7) + 1, TOTAL_WEEKS)
         
         return current_week
+    
+    async def can_advance_to_current_week(self, user_id: int, target_week: int) -> tuple:
+        """Verificar si puede estar en la semana actual"""
+        if not WEEK_COMPLETION_REQUIRED:
+            return True, "Validación de semana completa deshabilitada"
+            
+        if target_week <= 1:
+            return True, "Primera semana"
+            
+        # Verificar semana anterior
+        previous_week = target_week - 1
+        
+        # Verificar evidencias de la semana anterior
+        evidence_status = evidence_validator.get_week_evidence_status(user_id, previous_week)
+        missing_evidences = []
+        
+        for evidence_type, status in evidence_status.items():
+            if status['status'] != 'approved':
+                missing_evidences.append(evidence_type)
+        
+        if missing_evidences:
+            return False, f"Debes completar evidencias de semana {previous_week}: {', '.join(missing_evidences)}"
+        
+        # Verificar examen de la semana anterior
+        exam_result = exam_manager.get_latest_exam_result(user_id, previous_week)
+        if not exam_result or not exam_result['passed']:
+            return False, f"Debes aprobar el examen de la semana {previous_week}"
+        
+        return True, "Puede estar en la semana actual"
         
     def get_week_content(self, week: int) -> dict:
         """Obtener contenido de la semana específica"""
@@ -194,6 +234,43 @@ Estoy aquí para guiarte en tu journey de **12 semanas** hacia convertirte en un
         user_id = update.effective_user.id
         current_week = self.calculate_current_week(user_id)
         
+        # Verificar si puede estar en la semana actual
+        can_advance, reason = await self.can_advance_to_current_week(user_id, current_week)
+        
+        if not can_advance and WEEK_COMPLETION_REQUIRED:
+            # Resetear a semana anterior
+            previous_week = max(1, current_week - 1)
+            update_progress(user_id, 'reset_week', previous_week)
+            
+            message = f"""
+⚠️ **SEMANA RESTABLECIDA**
+
+📅 **Restablecido a semana {previous_week}**
+
+🎯 **Motivo:** {reason}
+
+📋 **Para avanzar a semana {current_week} necesitas:**
+• ✅ Completar proyecto de semana {previous_week}
+• ✅ Aprobar examen (70% mínimo)
+• ✅ Enviar todas las evidencias requeridas
+
+💪 **¡No te preocupes!** Esto te ayudará a:
+• Dominar completamente los conceptos
+• Tener bases sólidas para las siguientes semanas
+• Ser un mejor desarrollador
+
+🚀 **Comandos útiles:**
+• /estado - Ver qué falta completar
+• /evidencia - Enviar evidencias
+• /examen - Tomar examen
+
+¡Vamos a completar esta semana! 💪
+"""
+            
+            await update.message.reply_text(message, parse_mode='Markdown')
+            return
+            
+        # Continuar con lógica normal si puede avanzar
         if current_week > TOTAL_WEEKS:
             message = """
 🎉 **¡FELICIDADES! ¡PROGRAMA COMPLETADO!** 🎉
@@ -435,8 +512,13 @@ Selecciona lo que lograste:
             await update.message.reply_text("❌ Error: Usuario no inicializado. Envía /start primero.")
             return
         
-        # Mensaje base aleatorio
-        base_message = random.choice(MOTIVATIONAL_PHRASES)
+        # Alternar entre frases base y frases AI
+        use_ai_phrase = random.choice([True, False])
+        
+        if use_ai_phrase:
+            base_message = random.choice(AI_MOTIVATIONAL_PHRASES)
+        else:
+            base_message = random.choice(MOTIVATIONAL_PHRASES)
         
         # Contexto personal
         personal_touches = []
@@ -467,6 +549,9 @@ Selecciona lo que lograste:
         # Consejo personalizado
         progress_advice = self.get_progress_specific_advice(stats, current_week)
         
+        # Frase extra de IA
+        ai_bonus = random.choice(AI_MOTIVATIONAL_PHRASES)
+        
         full_message = f"""
 🚀 **¡BOOST DE MOTIVACIÓN!**
 
@@ -479,6 +564,9 @@ Selecciona lo que lograste:
 
 🎯 **Consejo personalizado:**
 {progress_advice}
+
+✨ **Bonus de hoy:**
+{ai_bonus}
 
 🏆 **Mantra del día:**
 "No existe código perfecto, solo código que funciona y se puede mejorar"
@@ -652,6 +740,20 @@ Selecciona el tipo de recurso que necesitas:
             
         elif data == "practice_sites":
             await self.show_practice_sites(query)
+            
+        # Comandos de reinicio
+        elif data == "confirm_reset":
+            await self.confirm_reset(query)
+            
+        elif data == "cancel_reset":
+            await self.cancel_reset(query)
+            
+        # Reinicio completo
+        elif data == "confirm_reset":
+            await self.confirm_reset(update, context)
+            
+        elif data == "cancel_reset":
+            await self.cancel_reset(update, context)
             
     # Métodos para callbacks específicos
     
@@ -1321,6 +1423,140 @@ Selecciona tu respuesta:
         reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
         
         await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+    
+    async def reset_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Comando /reiniciar - Reiniciar completamente el bot"""
+        user_id = update.effective_user.id
+        username = update.effective_user.first_name
+        
+        # Confirmar reinicio
+        keyboard = [
+            [InlineKeyboardButton("🔄 SÍ, REINICIAR TODO", callback_data="confirm_reset")],
+            [InlineKeyboardButton("❌ Cancelar", callback_data="cancel_reset")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        message = f"""
+⚠️ **REINICIAR BOT COMPLETAMENTE**
+
+🔄 **¿Estás seguro de que quieres reiniciar?**
+
+📊 **Esto eliminará:**
+• Todo tu progreso actual
+• Horas de estudio registradas
+• Proyectos completados
+• Evidencias enviadas
+• Resultados de exámenes
+• Estadísticas y badges
+
+🆕 **Empezarás desde:**
+• Semana 1 - CSS Layouts Fundamentals
+• 0 puntos y 0 horas
+• Sin proyectos completados
+
+💡 **Usa esto solo si:**
+• Quieres empezar completamente de cero
+• Hubo algún error en tu progreso
+• Cambiaste de plan de estudios
+
+⚠️ **ESTA ACCIÓN NO SE PUEDE DESHACER**
+"""
+        
+        await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+        
+    async def confirm_reset(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Confirmar y ejecutar reinicio completo"""
+        query = update.callback_query
+        await query.answer()
+        
+        user_id = query.from_user.id
+        username = query.from_user.first_name
+        
+        try:
+            # Reinicializar usuario completamente
+            self.reset_user_completely(user_id, username)
+            
+            message = f"""
+✅ **¡REINICIO COMPLETADO!**
+
+🎯 **¡Hola de nuevo, {username}!**
+
+🔄 **Tu progreso ha sido reiniciado:**
+• Semana 1/12 - CSS Layouts Fundamentals
+• 0 puntos de 15 objetivo
+• 0 horas de estudio
+• Estado: Beginner Coder
+
+🎯 **Tu primera misión:**
+Ve a flexboxfroggy.com y completa los niveles 1-12
+
+🚀 **Comandos para empezar:**
+• /semana - Ver contenido actual
+• /progreso - Tus estadísticas
+• /estudie [horas] - Registrar tiempo
+• /help - Lista completa
+
+💪 **¡Es hora de empezar tu journey hacia Job Ready Developer!**
+
+¿Listo para la transformación? 🚀
+"""
+            
+            await query.edit_message_text(message, parse_mode='Markdown')
+            
+        except Exception as e:
+            logger.error(f"Error reiniciando usuario {user_id}: {e}")
+            await query.edit_message_text(
+                "❌ Error al reiniciar. Inténtalo de nuevo o contacta al soporte.",
+                parse_mode='Markdown'
+            )
+            
+    def reset_user_completely(self, user_id: int, username: str):
+        """Reiniciar completamente un usuario"""
+        import sqlite3
+        
+        conn = sqlite3.connect('study_mentor.db')
+        cursor = conn.cursor()
+        
+        try:
+            # Eliminar todos los registros del usuario
+            cursor.execute('DELETE FROM users WHERE user_id = ?', (user_id,))
+            cursor.execute('DELETE FROM daily_progress WHERE user_id = ?', (user_id,))
+            cursor.execute('DELETE FROM weekly_evaluations WHERE user_id = ?', (user_id,))
+            cursor.execute('DELETE FROM evidences WHERE user_id = ?', (user_id,))
+            cursor.execute('DELETE FROM exam_results WHERE user_id = ?', (user_id,))
+            
+            # Recrear usuario desde cero
+            cursor.execute('''
+                INSERT INTO users (user_id, username, start_date, current_week, total_points, 
+                                 projects_completed, concepts_mastered, total_hours, study_days, 
+                                 current_streak, last_study_date)
+                VALUES (?, ?, ?, 1, 0, 0, 0, 0, 0, 0, NULL)
+            ''', (user_id, username, date.today()))
+            
+            conn.commit()
+            logger.info(f"Usuario {username} ({user_id}) reiniciado completamente")
+            
+        except Exception as e:
+            logger.error(f"Error reiniciando usuario {user_id}: {e}")
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+            
+    async def cancel_reset(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Cancelar reinicio"""
+        query = update.callback_query
+        await query.answer()
+        
+        message = """
+✅ **Reinicio cancelado**
+
+Tu progreso está seguro. ¡Sigue adelante! 💪
+
+Usa /progreso para ver tu estado actual.
+"""
+        
+        await query.edit_message_text(message, parse_mode='Markdown')
 
 def main():
     """Función principal"""

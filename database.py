@@ -78,7 +78,8 @@ def update_progress(user_id: int, progress_type: str, value):
         SELECT last_study_date FROM users WHERE user_id = ?
         ''', (user_id,))
         
-        last_date = cursor.fetchone()[0]
+        result = cursor.fetchone()
+        last_date = result[0] if result else None
         is_new_day = str(last_date) != str(today)
         
         # Actualizar horas de estudio
@@ -116,6 +117,13 @@ def update_progress(user_id: int, progress_type: str, value):
             total_points = total_points + 0.5
         WHERE user_id = ?
         ''', (user_id,))
+        
+    elif progress_type == 'reset_week':
+        cursor.execute('''
+        UPDATE users 
+        SET current_week = ?
+        WHERE user_id = ?
+        ''', (value, user_id))
     
     conn.commit()
     conn.close()

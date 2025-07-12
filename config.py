@@ -11,6 +11,9 @@ CHAT_ID = os.getenv('CHAT_ID')  # Tu chat ID específico
 EVIDENCE_REQUIRED = True  # Exigir evidencias para completar tareas
 STRICT_VALIDATION = True  # No avanzar sin completar semana actual
 EXAM_THRESHOLD = 0.7  # 70% mínimo para aprobar exámenes
+WEEK_COMPLETION_REQUIRED = True  # Debe completar TODO para avanzar
+AUTO_RESET_INCOMPLETE_WEEKS = True  # Restablecer si no completa semana
+
 EVIDENCE_TYPES = [
     "screenshot_project",  # Captura del proyecto funcionando
     "deployed_url",        # URL del proyecto desplegado
@@ -23,6 +26,9 @@ TOTAL_WEEKS = 12
 POINTS_TARGET = 15
 DAILY_STUDY_REMINDER = "09:00"  # 9 AM
 WEEKLY_CHECK_REMINDER = "18:00"  # 6 PM viernes
+MOTIVATIONAL_REMINDER = "20:00"  # 8 PM
+DAILY_NOTIFICATIONS = True  # Activar notificaciones diarias
+WEEK_DEADLINE_DAYS = 7  # Días para completar una semana
 
 # Frases motivacionales
 MOTIVATIONAL_PHRASES = [
@@ -32,6 +38,40 @@ MOTIVATIONAL_PHRASES = [
     "⭐ Tu futuro como developer empieza HOY!",
     "🔥 No existe código perfecto, solo código que funciona!",
     "🏆 Cada pequeño logro suma para tu gran objetivo!"
+]
+
+# Frases motivacionales generadas con IA - Se renuevan automáticamente
+AI_MOTIVATIONAL_PHRASES = [
+    "🌟 Recuerda: cada bug que resuelves te convierte en mejor programador",
+    "🎯 La consistencia diaria vale más que sesiones maratónicas esporádicas",
+    "💡 Hoy es un día perfecto para transformar una idea en código funcional",
+    "🔥 Tu único competidor eres tú mismo de ayer - mejora aunque sea 1%",
+    "🚀 Los desarrolladores exitosos no nacen, se hacen línea por línea",
+    "💪 Cada función que escribes hoy es una habilidad que tendrás para siempre",
+    "⭐ El código que escribas hoy puede cambiar el mundo mañana",
+    "🎮 Programar es como un videojuego: cada error es experiencia ganada",
+    "🌈 La programación es arte que resuelve problemas reales",
+    "🔧 Un desarrollador es un solucionador de problemas con superpoderes",
+    "📚 Aprender a programar es como aprender un idioma que habla el futuro",
+    "🎨 Cada proyecto es tu lienzo, cada línea de código tu pincelada",
+    "🏆 No se trata de ser perfecto, se trata de ser constante",
+    "🔥 La programación no es sobre memorizar sintaxis, es sobre resolver problemas",
+    "🌍 Cada desarrollador empezó exactamente donde estás tú ahora",
+    "⚡ El mejor momento para empezar era ayer, el segundo mejor es ahora",
+    "💻 Tu computadora es tu laboratorio, experimenta sin miedo",
+    "🎯 Small steps daily lead to big changes yearly",
+    "🌟 Cada error es una lección disfrazada, abraza el debugging",
+    "🚀 Tu próximo commit puede ser el que cambie tu carrera",
+    "🔥 La programación es 10% escribir código, 90% pensar en soluciones",
+    "💡 Hoy vas a aprender algo que tu yo del pasado no sabía",
+    "🎮 Level up your skills: un proyecto a la vez",
+    "⭐ El código limpio es amor propio convertido en sintaxis",
+    "🌈 Diversity in approaches leads to creative solutions",
+    "🔧 Break it, fix it, learn from it - ese es el ciclo del growth",
+    "📈 Tu progreso no se mide en líneas de código, sino en problemas resueltos",
+    "🎨 Elegant code is a poem that computers can understand",
+    "🏆 Persistence beats talent when talent doesn't persist",
+    "🔥 Today's struggle is tomorrow's strength"
 ]
 
 # Datos de la guía de estudio estructurados

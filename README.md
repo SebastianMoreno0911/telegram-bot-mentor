@@ -1,6 +1,6 @@
 # 🤖 Telegram Bot Mentor
 
-Bot de Telegram para la Fundación que funciona 24/7 en la nube.
+Bot de Telegram personalizado para Sebastian que funciona 24/7 en la nube.
 
 ## 📋 Estado del Proyecto
 
@@ -74,9 +74,12 @@ Una vez corregida la configuración:
 ## 🤖 Comandos del Bot
 
 - `/start` - Mensaje de bienvenida
-- `/info` - Información sobre la fundación
-- `/contacto` - Datos de contacto
-- `/ayuda` - Lista de comandos disponibles
+- `/progreso` - Estadísticas de progreso
+- `/semana` - Contenido semanal actual
+- `/estudie [horas]` - Registrar tiempo de estudio
+- `/motivacion` - Mensaje motivacional
+- `/reiniciar` - Reiniciar bot completamente
+- `/help` - Lista de comandos disponibles
 
 ## 🔍 Solución de Problemas
 
@@ -100,6 +103,6 @@ Una vez corregida la configuración:
 
 ---
 
-**Autor:** Desarrollo para Fundación  
-**Última actualización:** Diciembre 2024  
-**Estado:** Listo para producción (requiere cambio de configuración en Render)
+**Autor:** Sebastian's Personal Bot Mentor  
+**Última actualización:** Julio 2025  
+**Estado:** Listo para producción con nuevas funcionalidades
