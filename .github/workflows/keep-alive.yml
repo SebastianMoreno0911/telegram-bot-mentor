@@ -1,0 +1,23 @@
+name: Keep Codespace Alive
+
+on:
+  schedule:
+    # Ejecutar cada 6 horas para mantener activo
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Keep Codespace Active
+      run: |
+        echo "🔄 Manteniendo Codespace activo..."
+        curl -H "Accept: application/vnd.github.v3+json" \
+             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+             https://api.github.com/repos/${{ github.repository }}/codespaces
+        
+    - name: Health Check
+      run: |
+        echo "✅ Codespace keep-alive ejecutado $(date)"
